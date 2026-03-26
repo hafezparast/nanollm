@@ -87,6 +87,8 @@ class Adapter(BaseAdapter):
             prompt_tokens=usage_data.get("prompt_tokens", 0),
             completion_tokens=usage_data.get("completion_tokens", 0),
             total_tokens=usage_data.get("total_tokens", 0),
+            completion_tokens_details=usage_data.get("completion_tokens_details"),
+            prompt_tokens_details=usage_data.get("prompt_tokens_details"),
         )
 
         return ModelResponse(

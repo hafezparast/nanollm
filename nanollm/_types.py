@@ -45,6 +45,8 @@ class Usage(_DictAccessMixin):
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    completion_tokens_details: Any = None
+    prompt_tokens_details: Any = None
 
 
 @dataclass

@@ -65,6 +65,18 @@ class TestModelResponse:
         assert response.id.startswith("chatcmpl-")
         assert response.created > 0
 
+    def test_usage_token_details_default_none(self):
+        """crawl4ai checks hasattr/getattr on these fields."""
+        response = make_model_response(content="Hi")
+        assert response.usage.completion_tokens_details is None
+        assert response.usage.prompt_tokens_details is None
+
+    def test_usage_token_details_hasattr(self):
+        """crawl4ai uses hasattr-style guard on these."""
+        response = make_model_response(content="Hi")
+        assert hasattr(response.usage, "completion_tokens_details")
+        assert hasattr(response.usage, "prompt_tokens_details")
+
 
 class TestEmbeddingResponse:
     def test_data_access(self):
