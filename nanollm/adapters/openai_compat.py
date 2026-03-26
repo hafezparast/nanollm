@@ -13,6 +13,7 @@ from typing import Any
 
 from .._config import ProviderConfig, get_provider_config
 from .._types import (
+    _AttrDict,
     Choice,
     EmbeddingData,
     EmbeddingResponse,
@@ -83,12 +84,14 @@ class Adapter(BaseAdapter):
             )
 
         usage_data = data.get("usage") or {}
+        ctd = usage_data.get("completion_tokens_details")
+        ptd = usage_data.get("prompt_tokens_details")
         usage = Usage(
             prompt_tokens=usage_data.get("prompt_tokens", 0),
             completion_tokens=usage_data.get("completion_tokens", 0),
             total_tokens=usage_data.get("total_tokens", 0),
-            completion_tokens_details=usage_data.get("completion_tokens_details"),
-            prompt_tokens_details=usage_data.get("prompt_tokens_details"),
+            completion_tokens_details=_AttrDict(ctd) if ctd else None,
+            prompt_tokens_details=_AttrDict(ptd) if ptd else None,
         )
 
         return ModelResponse(

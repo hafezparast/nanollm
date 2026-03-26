@@ -25,6 +25,28 @@ class _DictAccessMixin:
         return getattr(self, key, default)
 
 
+class _AttrDict(dict):
+    """A dict that also supports attribute access and __dict__.
+
+    litellm returns token detail objects that crawl4ai accesses via
+    .__dict__. This class wraps a plain dict so that both
+    obj.__dict__ and obj.key work as expected.
+    """
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        self[key] = value
+
+    @property
+    def __dict__(self) -> dict:  # type: ignore[override]
+        return dict(self)
+
+
 @dataclass
 class Message(_DictAccessMixin):
     content: str | None = None

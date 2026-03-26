@@ -77,6 +77,41 @@ class TestModelResponse:
         assert hasattr(response.usage, "completion_tokens_details")
         assert hasattr(response.usage, "prompt_tokens_details")
 
+    def test_usage_token_details_dict_access(self):
+        """crawl4ai calls .__dict__ on these when they're not None.
+
+        Pattern from extraction_strategy.py:
+            response.usage.completion_tokens_details.__dict__
+            if response.usage.completion_tokens_details
+            else {}
+        """
+        from nanollm._types import _AttrDict, Usage
+        usage = Usage(
+            prompt_tokens=10,
+            completion_tokens=5,
+            total_tokens=15,
+            completion_tokens_details=_AttrDict({"reasoning_tokens": 3, "accepted_prediction_tokens": 0}),
+            prompt_tokens_details=_AttrDict({"cached_tokens": 2}),
+        )
+        # __dict__ access (the crawl4ai pattern)
+        ctd = usage.completion_tokens_details.__dict__ if usage.completion_tokens_details else {}
+        ptd = usage.prompt_tokens_details.__dict__ if usage.prompt_tokens_details else {}
+        assert ctd == {"reasoning_tokens": 3, "accepted_prediction_tokens": 0}
+        assert ptd == {"cached_tokens": 2}
+
+        # Attribute access also works
+        assert usage.completion_tokens_details.reasoning_tokens == 3
+        assert usage.prompt_tokens_details.cached_tokens == 2
+
+    def test_usage_token_details_none_guard(self):
+        """When None, the guard produces empty dict (crawl4ai pattern)."""
+        from nanollm._types import Usage
+        usage = Usage()
+        ctd = usage.completion_tokens_details.__dict__ if usage.completion_tokens_details else {}
+        ptd = usage.prompt_tokens_details.__dict__ if usage.prompt_tokens_details else {}
+        assert ctd == {}
+        assert ptd == {}
+
 
 class TestEmbeddingResponse:
     def test_data_access(self):

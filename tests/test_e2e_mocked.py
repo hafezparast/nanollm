@@ -608,6 +608,34 @@ class TestDropParams:
         nanollm.drop_params = True
 
 
+OPENAI_COMPLETION_RESPONSE_WITH_DETAILS = {
+    "id": "chatcmpl-abc456",
+    "object": "chat.completion",
+    "created": 1700000000,
+    "model": "gpt-4o",
+    "choices": [
+        {
+            "index": 0,
+            "message": {"role": "assistant", "content": "Hello!"},
+            "finish_reason": "stop",
+        }
+    ],
+    "usage": {
+        "prompt_tokens": 12,
+        "completion_tokens": 6,
+        "total_tokens": 18,
+        "completion_tokens_details": {
+            "reasoning_tokens": 3,
+            "accepted_prediction_tokens": 0,
+            "rejected_prediction_tokens": 0,
+        },
+        "prompt_tokens_details": {
+            "cached_tokens": 5,
+        },
+    },
+}
+
+
 # ── Crawl4ai simulation tests ──
 
 
@@ -795,3 +823,70 @@ class TestCrawl4aiSimulation:
         assert result is not None
         assert result.choices[0].message.content == "Hello! How can I help?"
         assert call_count == 3
+
+    @respx.mock
+    def test_extraction_strategy_token_details_pattern(self):
+        """Simulates crawl4ai/extraction_strategy.py token details access.
+
+        The exact pattern:
+            completion_tokens_details=response.usage.completion_tokens_details.__dict__
+            if response.usage.completion_tokens_details
+            else {},
+        """
+        respx.post("https://api.openai.com/v1/chat/completions").mock(
+            return_value=httpx.Response(
+                200, json=OPENAI_COMPLETION_RESPONSE_WITH_DETAILS
+            )
+        )
+
+        response = completion(
+            model="openai/gpt-4o",
+            messages=[{"role": "user", "content": "Hi"}],
+            api_key="sk-test",
+        )
+
+        # Exact crawl4ai pattern from extraction_strategy.py
+        ctd = (
+            response.usage.completion_tokens_details.__dict__
+            if response.usage.completion_tokens_details
+            else {}
+        )
+        ptd = (
+            response.usage.prompt_tokens_details.__dict__
+            if response.usage.prompt_tokens_details
+            else {}
+        )
+
+        assert ctd == {
+            "reasoning_tokens": 3,
+            "accepted_prediction_tokens": 0,
+            "rejected_prediction_tokens": 0,
+        }
+        assert ptd == {"cached_tokens": 5}
+
+    @respx.mock
+    def test_token_details_none_pattern(self):
+        """When provider doesn't return details, guard produces empty dict."""
+        respx.post("https://api.openai.com/v1/chat/completions").mock(
+            return_value=httpx.Response(200, json=OPENAI_COMPLETION_RESPONSE)
+        )
+
+        response = completion(
+            model="openai/gpt-4o",
+            messages=[{"role": "user", "content": "Hi"}],
+            api_key="sk-test",
+        )
+
+        ctd = (
+            response.usage.completion_tokens_details.__dict__
+            if response.usage.completion_tokens_details
+            else {}
+        )
+        ptd = (
+            response.usage.prompt_tokens_details.__dict__
+            if response.usage.prompt_tokens_details
+            else {}
+        )
+
+        assert ctd == {}
+        assert ptd == {}
